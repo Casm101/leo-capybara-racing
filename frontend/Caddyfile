@@ -1,0 +1,13 @@
+leo.christiansmithmantas.com {
+  encode gzip zstd
+
+  # WebSocket proxy to backend
+  handle_path /ws* {
+    reverse_proxy backend:4000
+  }
+
+  # Serve SPA
+  root * /srv
+  try_files {path} /index.html
+  file_server
+}
