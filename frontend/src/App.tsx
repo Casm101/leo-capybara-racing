@@ -12,10 +12,11 @@ import {
 } from "./components/RaceUI";
 import { useRaceClient } from "./useRaceClient";
 import type { Horse } from "./types";
+import { resolveWsUrl } from "./wsConfig";
 
 type Step = "name" | "horse" | "race";
 
-const WS_URL = import.meta.env.VITE_WS_URL ?? "ws://localhost:4000";
+const WS_URL = resolveWsUrl();
 const MIN_NAME_LENGTH = 3;
 
 function App() {

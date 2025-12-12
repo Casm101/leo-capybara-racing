@@ -4,12 +4,17 @@ import QRCode from "qrcode";
 import confetti from "canvas-confetti";
 import { RaceTrack, StatusChip, WinnerList } from "./components/RaceUI";
 import { useRaceClient } from "./useRaceClient";
+import { resolveWsUrl } from "./wsConfig";
 
-const WS_URL = import.meta.env.VITE_WS_URL ?? "ws://localhost:4000";
+const WS_URL = resolveWsUrl();
 
 function RaceDisplay() {
     const { state, connected } = useRaceClient(WS_URL);
-    const joinUrl = useMemo(() => `${window.location.origin}/`, []);
+    const joinUrl = useMemo(() => {
+        const url = new URL("/", window.location.origin);
+        url.searchParams.set("ws", WS_URL);
+        return url.toString();
+    }, []);
     const [qrData, setQrData] = useState<string | null>(null);
     const winners = state.winningBets;
     const showWinners = state.race.status === "finished" && winners.length > 0;

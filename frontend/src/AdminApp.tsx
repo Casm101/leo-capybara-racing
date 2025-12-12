@@ -9,8 +9,9 @@ import {
 } from "./components/RaceUI";
 import { useRaceClient } from "./useRaceClient";
 import type { PublicState } from "./types";
+import { resolveWsUrl } from "./wsConfig";
 
-const WS_URL = import.meta.env.VITE_WS_URL ?? "ws://localhost:4000";
+const WS_URL = resolveWsUrl();
 
 function AdminApp() {
     const { state, notice, connected, send } = useRaceClient(WS_URL);
