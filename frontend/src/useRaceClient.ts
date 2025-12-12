@@ -172,5 +172,21 @@ export function useRaceClient(url: string) {
     connect();
   }, [connect]);
 
-  return { state, playerId, notice, connected, send, forceReconnect };
+  const logout = useCallback(() => {
+    pendingJoinRef.current = null;
+    pendingNameRef.current = null;
+    playerIdRef.current = null;
+    persistIdentity({});
+    setPlayerId(null);
+    try {
+      const payload: ClientMessage = { type: 'logout' };
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify(payload));
+      }
+    } catch {
+      // ignore send errors
+    }
+  }, []);
+
+  return { state, playerId, notice, connected, send, forceReconnect, logout };
 }

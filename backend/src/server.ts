@@ -59,6 +59,7 @@ interface PublicState {
 type ClientMessage =
   | { type: 'join'; name: string }
   | { type: 'place_bet'; horseId: number; amount: number }
+  | { type: 'logout' }
   | {
       type: 'admin_action';
       action:
@@ -189,6 +190,23 @@ function broadcastState(): void {
       client.send(payload);
     }
   });
+}
+
+function handleLogout(socket: WebSocket): void {
+  const playerId = connections.get(socket);
+  connections.delete(socket);
+  if (playerId) {
+    players.delete(playerId);
+    bets = bets.filter((bet) => bet.playerId !== playerId);
+  }
+  try {
+    if (socket.readyState === WebSocket.OPEN) {
+      socket.close(1000, 'Logged out');
+    }
+  } catch {
+    // ignore close errors
+  }
+  broadcastState();
 }
 
 function sendNotice(socket: WebSocket, message: string): void {
@@ -471,6 +489,9 @@ wss.on('connection', (socket) => {
           break;
         case 'place_bet':
           handleBet(socket, data);
+          break;
+        case 'logout':
+          handleLogout(socket);
           break;
         case 'admin_action':
           handleAdminAction(socket, data);

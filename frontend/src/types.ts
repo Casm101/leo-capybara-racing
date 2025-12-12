@@ -59,6 +59,7 @@ export type ServerMessage =
 export type ClientMessage =
   | { type: 'join'; name: string }
   | { type: 'place_bet'; horseId: number; amount: number }
+  | { type: 'logout' }
   | {
       type: 'admin_action';
       action:

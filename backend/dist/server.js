@@ -104,6 +104,23 @@ function broadcastState() {
         }
     });
 }
+function handleLogout(socket) {
+    const playerId = connections.get(socket);
+    connections.delete(socket);
+    if (playerId) {
+        players.delete(playerId);
+        bets = bets.filter((bet) => bet.playerId !== playerId);
+    }
+    try {
+        if (socket.readyState === WebSocket.OPEN) {
+            socket.close(1000, 'Logged out');
+        }
+    }
+    catch {
+        // ignore close errors
+    }
+    broadcastState();
+}
 function sendNotice(socket, message) {
     if (socket.readyState === WebSocket.OPEN) {
         socket.send(JSON.stringify({ type: 'notice', message }));
@@ -362,6 +379,9 @@ wss.on('connection', (socket) => {
                     break;
                 case 'place_bet':
                     handleBet(socket, data);
+                    break;
+                case 'logout':
+                    handleLogout(socket);
                     break;
                 case 'admin_action':
                     handleAdminAction(socket, data);
