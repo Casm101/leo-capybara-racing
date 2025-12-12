@@ -59,13 +59,12 @@ function App() {
     useEffect(() => {
         if (
             playerId &&
-            step === "race" &&
             (state.race.status === "idle" || state.race.status === "ready")
         ) {
             setStep("horse");
             setSelectedHorse(state.horses[0]?.id ?? null);
         }
-    }, [playerId, step, state.race.status, state.horses]);
+    }, [playerId, state.race.status, state.horses]);
 
     useEffect(() => {
         if (!selectedHorse && state.horses.length) {
