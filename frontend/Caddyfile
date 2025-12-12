@@ -1,11 +1,15 @@
 leo.christiansmithmantas.com {
   encode gzip zstd
 
-  # WebSocket proxy to backend (preserve /ws path, upgrade handled automatically)
-  reverse_proxy /ws* backend:4000
+  @ws path /ws*
+  handle @ws {
+    uri strip_prefix /ws
+    reverse_proxy backend:4000
+  }
 
-  # Serve SPA
-  root * /srv
-  try_files {path} /index.html
-  file_server
+  handle {
+    root * /srv
+    try_files {path} /index.html
+    file_server
+  }
 }
