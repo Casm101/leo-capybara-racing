@@ -11,6 +11,8 @@ const INITIAL_STATE: PublicState = {
   showQrOverlay: true,
 };
 
+const STORAGE_KEY = 'race-client';
+
 export function useRaceClient(url: string) {
   const [state, setState] = useState<PublicState>(INITIAL_STATE);
   const [playerId, setPlayerId] = useState<string | null>(null);
@@ -21,6 +23,28 @@ export function useRaceClient(url: string) {
   const pendingNameRef = useRef<string | null>(null);
   const playerIdRef = useRef<string | null>(null);
   const pendingJoinRef = useRef<string | null>(null);
+  const storageRef = useRef<{ id?: string; name?: string } | null>(null);
+
+  // Load stored identity once
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        storageRef.current = JSON.parse(raw);
+      }
+    } catch {
+      storageRef.current = null;
+    }
+  }, []);
+
+  const persistIdentity = (data: { id?: string; name?: string }) => {
+    storageRef.current = data;
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } catch {
+      // ignore storage failures
+    }
+  };
 
   const connect = useCallback(() => {
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) return;
@@ -32,6 +56,12 @@ export function useRaceClient(url: string) {
       setConnected(true);
       if (pendingJoinRef.current) {
         const name = pendingJoinRef.current;
+        socket.send(JSON.stringify({ type: 'join', name } satisfies ClientMessage));
+      }
+      // Auto-rejoin with stored name if we have no player yet
+      if (!playerIdRef.current && storageRef.current?.name && !pendingJoinRef.current) {
+        const name = storageRef.current.name;
+        pendingJoinRef.current = name.toLowerCase();
         socket.send(JSON.stringify({ type: 'join', name } satisfies ClientMessage));
       }
     };
@@ -59,6 +89,28 @@ export function useRaceClient(url: string) {
               pendingNameRef.current = null;
             }
           }
+          // Restore from stored ID if present in state
+          if (!playerIdRef.current && storageRef.current?.id) {
+            const found = message.payload.players[storageRef.current.id];
+            if (found) {
+              playerIdRef.current = found.id;
+              setPlayerId(found.id);
+              pendingNameRef.current = null;
+              pendingJoinRef.current = null;
+            }
+          }
+          // If we have a stored name but no ID yet, try joining again
+          if (
+            !playerIdRef.current &&
+            storageRef.current?.name &&
+            !pendingJoinRef.current &&
+            !pendingNameRef.current &&
+            wsRef.current?.readyState === WebSocket.OPEN
+          ) {
+            const name = storageRef.current.name;
+            pendingJoinRef.current = name.toLowerCase();
+            wsRef.current.send(JSON.stringify({ type: 'join', name } satisfies ClientMessage));
+          }
           return;
         }
 
@@ -67,6 +119,7 @@ export function useRaceClient(url: string) {
           playerIdRef.current = message.playerId;
           pendingNameRef.current = null;
           pendingJoinRef.current = null;
+          persistIdentity({ id: message.playerId, name: message.name });
           setNotice(null);
           return;
         }
@@ -93,6 +146,7 @@ export function useRaceClient(url: string) {
       if (payload.type === 'join') {
         const normalized = payload.name.trim();
         pendingNameRef.current = normalized.toLowerCase();
+        persistIdentity({ name: normalized });
         if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
           wsRef.current.send(JSON.stringify({ ...payload, name: normalized }));
           pendingJoinRef.current = null;
@@ -108,5 +162,15 @@ export function useRaceClient(url: string) {
     [],
   );
 
-  return { state, playerId, notice, connected, send };
+  const forceReconnect = useCallback(() => {
+    if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
+    try {
+      wsRef.current?.close();
+    } catch {
+      // ignore close errors
+    }
+    connect();
+  }, [connect]);
+
+  return { state, playerId, notice, connected, send, forceReconnect };
 }

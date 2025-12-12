@@ -19,7 +19,8 @@ const WS_URL = import.meta.env.VITE_WS_URL ?? "ws://localhost:4000";
 const MIN_NAME_LENGTH = 3;
 
 function App() {
-    const { state, playerId, notice, connected, send } = useRaceClient(WS_URL);
+    const { state, playerId, notice, connected, send, forceReconnect } =
+        useRaceClient(WS_URL);
     const [step, setStep] = useState<Step>("name");
     const [screenName, setScreenName] = useState("");
     const [selectedHorse, setSelectedHorse] = useState<number | null>(null);
@@ -168,6 +169,9 @@ function App() {
                     ) : (
                         <StatusChip label="Guest" tone="muted" />
                     )}
+                    <button className="ghost-button" onClick={forceReconnect}>
+                        Reconnect
+                    </button>
                 </div>
             </header>
 
